@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ubunye Youth</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--g:#16244f;--g2:#4b4a9e;--y:#c9b8f2;--c:#eef6fb;--i:#14213d;--l:#c4def0;--m:#55638a;--w:#fff;--err:#b3261e;--ok:#1b6e3a}
+@media (prefers-color-scheme:dark){:root{--c:#0f1730;--i:#eef2ff;--l:#2a3768;--m:#a9b4d6;--w:#18224a}}
+*{box-sizing:border-box;margin:0}
+body{font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--c);color:var(--i);min-height:100vh}
+header{background:var(--g);color:#fff;padding:24px 16px 20px;position:relative}
+header h1{font-size:30px;font-weight:800;letter-spacing:-.5px}
+header p{font-size:13px;opacity:.85}
+header:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:repeating-linear-gradient(90deg,var(--y) 0 18px,transparent 18px 30px)}
+main{max-width:480px;margin:auto;padding:18px 16px 40px}
+.tabs{display:flex;background:var(--w);border-radius:10px;padding:4px;margin-bottom:16px;border:1.5px solid var(--l)}
+.tabs button{flex:1;border:0;background:none;padding:10px;font:700 14px system-ui;color:var(--m);border-radius:8px}
+.tabs button.on{background:var(--g);color:#fff}
+h2{font-size:20px;margin-bottom:4px}
+h3{font-size:15px;margin:18px 0 8px;color:var(--g2)}
+.mu{color:var(--m);font-size:13px;margin-bottom:12px}
+label{display:block;font-size:14px;font-weight:600;margin-bottom:10px}
+input,textarea{width:100%;font:inherit;padding:11px 12px;border:1.5px solid var(--l);border-radius:10px;background:var(--w);color:var(--i);margin-top:4px;font-weight:400}
+input:focus-visible,button:focus-visible{outline:3px solid var(--g2);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pri,.sec{width:100%;padding:13px;border-radius:10px;font:700 15px system-ui;border:0;margin-top:6px}
+.pri{background:var(--g);color:#fff}
+.sec{background:var(--l);color:var(--i)}
+.lnk{background:none;border:0;color:var(--g2);font:600 14px system-ui;padding:14px 0;width:100%}
+.msg{font-size:14px;min-height:20px;margin:4px 0}
+.err{color:var(--err)}.ok{color:var(--ok)}
+.card{background:var(--w);border-left:5px solid var(--g);border-radius:12px;padding:12px;margin-bottom:8px}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.row button{border:0;border-radius:99px;padding:8px 14px;font:700 13px system-ui}
+.ap{background:var(--g);color:#fff}.rj{background:var(--l);color:#b3261e}
+.hide{display:none}
+#sh{position:fixed;inset:0;background:#0007;z-index:9;display:flex;align-items:flex-end}
+.box{background:var(--c);width:100%;max-width:520px;margin:auto;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px 28px}
+.evg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.ck{display:flex;gap:8px;align-items:center;font-weight:400;background:var(--w);padding:8px 10px;border-radius:8px;margin:0;font-size:14px}
+.ck input{width:20px;height:20px;margin:0}
+.card[onclick]{cursor:pointer}
+</style></head>
+<body>
+<header><h1>Ubunye</h1><p>Fitness Youth Program NPC</p></header>
+<main id="app"><p class="mu">Loading...</p></main>
+<script>
+var SUPABASE_URL='https://webfslgwusivhwxqbyjo.supabase.co';
+var SUPABASE_KEY='sb_publishable_e2uxDvRM7szTY5myxkMzRw_9y010ioS';
+var REC=/type=recovery/.test(location.hash);
+var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var app=document.getElementById('app');
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function say(id,t,ok){var m=document.getElementById(id);if(m){m.textContent=t;m.className='msg '+(ok?'ok':'err')}}
+function nice(e){var t=(e&&e.message)||'Something went wrong.';
+ if(/invalid login/i.test(t))return 'Email or password is not right.';
+ if(/already registered/i.test(t))return 'That email is already registered. Log in instead.';
+ if(/rate limit/i.test(t))return 'Too many attempts. Wait a few minutes and try again.';
+ return t}
+
+function authView(mode){
+ var login='<h2>Log in</h2><p class="mu">Use the email address you registered with.</p>'+
+ '<form onsubmit="doLogin(event)"><label>Email address<input name="em" type="email" required autocomplete="email"></label>'+
+ '<label>Password<input name="pw" type="password" required autocomplete="current-password"></label>'+
+ '<p class="msg" id="m"></p><button class="pri">Log in</button></form>'+
+ '<button class="lnk" onclick="authView(\'forgot\')">Forgot your password?</button>';
+ var reg='<h2>Create your profile</h2><p class="mu">For admins and coaches. New coaches wait for admin approval.</p>'+
+ '<form onsubmit="doReg(event)"><div class="two"><label>Name<input name="fn" required autocomplete="given-name"></label>'+
+ '<label>Surname<input name="sn" required autocomplete="family-name"></label></div>'+
+ '<label>Email address<input name="em" type="email" required autocomplete="email"></label>'+
+ '<label>Password (at least 8 characters)<input name="pw" type="password" minlength="8" required autocomplete="new-password"></label>'+
+ '<label>Confirm password<input name="pw2" type="password" minlength="8" required autocomplete="new-password"></label>'+
+ '<p class="msg" id="m"></p><button class="pri">Register</button></form>'+
+ '<button class="lnk" onclick="authView(\'login\')">I already have a profile. Log in</button>';
+ var fg='<h2>Reset your password</h2><p class="mu">We will email you a link to choose a new password.</p>'+
+ '<form onsubmit="doForgot(event)"><label>Email address<input name="em" type="email" required autocomplete="email"></label>'+
+ '<p class="msg" id="m"></p><button class="pri">Send reset link</button></form>'+
+ '<button class="lnk" onclick="authView(\'login\')">Back to log in</button>';
+ var tabs='<div class="tabs"><button class="'+(mode!='reg'?'on':'')+'" onclick="authView(\'login\')">Log in</button><button class="'+(mode=='reg'?'on':'')+'" onclick="authView(\'reg\')">Register</button></div>';
+ app.innerHTML=(mode=='forgot'?'':tabs)+(mode=='reg'?reg:mode=='forgot'?fg:login);
+}
+async function doLogin(e){e.preventDefault();var f=e.target.elements;say('m','Logging in...',1);
+ var r=await db.auth.signInWithPassword({email:f.em.value.trim(),password:f.pw.value});
+ if(r.error)return say('m',nice(r.error));
+ start();}
+async function doReg(e){e.preventDefault();var f=e.target.elements;
+ if(f.pw.value!==f.pw2.value)return say('m','The two passwords do not match.');
+ say('m','Creating profile...',1);
+ var r=await db.auth.signUp({email:f.em.value.trim(),password:f.pw.value,options:{data:{first_name:f.fn.value.trim(),surname:f.sn.value.trim()}}});
+ if(r.error)return say('m',nice(r.error));
+ if(!r.data.session)return say('m','Profile created. Check your email to confirm, then log in.',1);
+ start();}
+async function doForgot(e){e.preventDefault();say('m','Sending...',1);
+ var r=await db.auth.resetPasswordForEmail(e.target.elements.em.value.trim(),{redirectTo:location.origin+location.pathname});
+ if(r.error)return say('m',nice(r.error));
+ say('m','Reset link sent. Check your inbox.',1);}
+function newPwView(){
+ app.innerHTML='<h2>Choose a new password</h2><form onsubmit="doNewPw(event)"><label>New password<input name="pw" type="password" minlength="8" required autocomplete="new-password"></label><p class="msg" id="m"></p><button class="pri">Save password</button></form>';}
+async function doNewPw(e){e.preventDefault();var r=await db.auth.updateUser({password:e.target.elements.pw.value});
+ if(r.error)return say('m',nice(r.error));REC=false;history.replaceState(null,'',location.pathname);start();}
+async function logout(){await db.auth.signOut();authView('login')}
+
+async function start(){
+ var s=await db.auth.getSession();
+ if(REC&&s.data.session)return newPwView();
+ if(!s.data.session)return authView('login');
+ var uid=s.data.session.user.id;
+ var p=await db.from('profiles').select('*').eq('id',uid).maybeSingle();
+ if(p.error||!p.data){app.innerHTML='<h2>No access</h2><p class="mu">This account does not have access to the app. Contact the director.</p><button class="sec" onclick="logout()">Log out</button>';return}
+ var u=p.data;
+ if(!u.approved){app.innerHTML='<h2>Awaiting approval</h2><p class="mu">Hi '+esc(u.first_name)+', your profile is registered. The director must approve it before you can open the app.</p><button class="sec" onclick="start()">Check again</button><button class="lnk" onclick="logout()">Log out</button>';return}
+ home(u);
+}
+async function home(u){
+ var admin=u.role=='admin';
+ app.innerHTML='<h2>Welcome, '+esc(u.first_name)+'</h2><p class="mu">Signed in as '+esc(u.role)+'.</p>'+
+ '<h3>Athletes</h3><div id="ath"><p class="mu">Loading...</p></div>'+'<h3>Training</h3><div id="ses"><p class="mu">Loading...</p></div>'+'<h3>Events</h3><div id="evs"><p class="mu">Loading...</p></div>'+'<h3>'+(admin?'Change requests':'My requests')+'</h3><div id="rq"><p class="mu">Loading...</p></div>'+
+ (admin?'<h3>Pending coaches</h3><div id="pend"><p class="mu">Loading...</p></div>':'')+
+ '<button class="sec" style="margin-top:18px" onclick="logout()">Log out</button>';
+ ME=u;loadAth();loadSes();loadEvs();loadReq();if(admin)loadPend();
+}
+async function loadPend(){
+ var r=await db.from('profiles').select('id,first_name,surname').eq('approved',false);
+ var box=document.getElementById('pend');if(!box)return;
+ if(r.error)return box.innerHTML='<p class="err">Could not load the list.</p>';
+ box.innerHTML=r.data.length?r.data.map(function(x){return '<div class="card row"><span><b>'+esc(x.first_name+' '+x.surname)+'</b></span><span><button class="ap" onclick="decide(\''+x.id+'\',1)">Approve</button> <button class="rj" onclick="decide(\''+x.id+'\',0)">Reject</button></span></div>'}).join(''):'<p class="mu">No coaches are waiting.</p>';
+}
+async function decide(id,yes){
+ if(!yes&&!confirm('Reject this coach? They will not get access.'))return;
+ var r=yes?await db.from('profiles').update({approved:true}).eq('id',id):await db.from('profiles').delete().eq('id',id);
+ if(r.error)alert('Could not save. Try again.');
+ loadPend();
+}
+
+var ME=null,ATH=[],AQ='';
+var EVS=['100m','200m','400m','800m','1500m','3000m','5000m','10000m','Race walk','Long jump','High jump','Shot put','100mH','400mH','Steeplechase','Road 5km','Road 10km','Road 21km','Cross country 1km','Cross country 2km','Cross country 4km','Cross country 6km','Cross country 8km','Cross country 10km'];
+function grp(dob){if(!dob)return 'Age not set';var d=new Date(dob),n=new Date(),a=n.getFullYear()-d.getFullYear(),m=n.getMonth()-d.getMonth();if(m<0||(m==0&&n.getDate()<d.getDate()))a--;return a<=10?'Under 10':a<=12?'Under 12':a<=14?'Under 14':a<=16?'Under 16':a<=18?'Under 18':'Over 18'}
+function wa(n){var d=String(n||'').replace(/\D/g,'');if(!d)return '';if(d[0]=='0')d='27'+d.slice(1);return 'https://wa.me/'+d}
+function sheet(t,b){var s=document.getElementById('sh');if(!s){s=document.createElement('div');s.id='sh';document.body.appendChild(s)}s.innerHTML='<div class="box"><div class="row"><h2>'+esc(t)+'</h2><button class="lnk" style="width:auto" onclick="closeSh()">Close</button></div>'+b+'</div>'}
+function closeSh(){var s=document.getElementById('sh');if(s)s.remove()}
+async function loadAth(){
+ var r=await db.from('athletes').select('*,partners(name),parents(name,phone)').order('first_name');
+ var box=document.getElementById('ath');if(!box)return;
+ if(r.error){box.innerHTML='<p class="err">Could not load athletes.</p>';return}
+ ATH=r.data;
+ box.innerHTML='<input placeholder="Search athletes" value="'+esc(AQ)+'" oninput="AQ=this.value.toLowerCase();drawList()">'+'<button class="pri" onclick="athForm()">'+(ME.role=='admin'?'Add athlete':'Request new athlete')+'</button>'+'<div id="al" style="margin-top:10px"></div>';
+ drawList();
+}
+function drawList(){
+ var L=ATH.filter(function(a){return (a.first_name+' '+(a.surname||'')).toLowerCase().indexOf(AQ)>-1});
+ document.getElementById('al').innerHTML=L.length?L.map(function(a){return '<div class="card" onclick="athView(\''+a.id+'\')"><b>'+esc(a.first_name+' '+(a.surname||''))+'</b><br><span class="mu">'+grp(a.date_of_birth)+(a.partners?', '+esc(a.partners.name):'')+'</span></div>'}).join(''):'<p class="mu">'+(ATH.length?'No match.':(ME.role=='admin'?'No athletes yet. Tap Add athlete.':'No athletes assigned to you yet.'))+'</p>';
+}
+function athView(id){setTimeout(function(){loadPB(id)},0);
+ var a=ATH.find(function(x){return x.id==id}),p=(a.parents||[])[0]||{};
+ sheet(a.first_name+' '+(a.surname||''),
+ '<div class="card"><b>'+grp(a.date_of_birth)+'</b><br><span class="mu">Born '+esc(a.date_of_birth||'not set')+(a.partners?'<br>'+esc(a.partners.name):'')+'</span></div>'+
+ '<h3>Events</h3><p>'+(esc((a.events||[]).join(', '))||'<span class="mu">None added</span>')+'</p>'+
+ '<h3>Personal bests</h3><div id="pbs"><p class="mu">Loading...</p></div>'+'<h3>Athlete contact</h3><p>'+(a.athlete_phone?'<a href="tel:'+esc(a.athlete_phone)+'">'+esc(a.athlete_phone)+'</a>':'<span class="mu">Not added</span>')+'</p>'+
+ '<h3>Parent or guardian</h3><p>'+esc(p.name||'Not added')+(p.phone?'<br><a href="tel:'+esc(p.phone)+'">'+esc(p.phone)+'</a>':'')+'</p>'+
+ (wa(p.phone)?'<a class="pri" style="display:block;text-align:center;text-decoration:none" href="'+wa(p.phone)+'" target="_blank" rel="noopener">WhatsApp parent</a>':'')+
+ (a.notes?'<h3>Notes</h3><p>'+esc(a.notes)+'</p>':'')+
+ (ME.role=='admin'?'<button class="sec" onclick="assignForm(\''+id+'\')">Assign coaches</button><button class="sec" onclick="athForm(\''+id+'\')">Edit</button><button class="sec" style="color:#b3261e" onclick="athDel(\''+id+'\')">Delete</button>':'<button class="sec" onclick="athForm(\''+id+'\')">Request a change</button><button class="sec" style="color:#b3261e" onclick="reqDel(\''+id+'\')">Request removal</button>'));
+}
+async function athForm(id){
+ var a=id?ATH.find(function(x){return x.id==id}):{},p=(a.parents||[])[0]||{};
+ var pr=await db.from('partners').select('name'),names=(pr.data||[]).map(function(x){return x.name}),ev=a.events||[];
+ sheet(ME.role=='admin'?(id?'Edit athlete':'Add athlete'):(id?'Request a change':'Request new athlete'),'<form onsubmit="athSave(event,\''+(id||'')+'\')">'+
+ '<div class="two"><label>First name<input name="fn" required value="'+esc(a.first_name)+'"></label><label>Surname<input name="sn" value="'+esc(a.surname)+'"></label></div>'+
+ '<label>Date of birth<input name="dob" type="date" required value="'+esc(a.date_of_birth)+'"></label>'+
+ '<label>Athlete phone (optional)<input name="ap" type="tel" placeholder="082 123 4567" value="'+esc(a.athlete_phone)+'"></label>'+
+ '<label>Club or school<input name="cl" list="dlc" value="'+esc(a.partners&&a.partners.name)+'"><datalist id="dlc">'+names.map(function(n){return '<option value="'+esc(n)+'">'}).join('')+'</datalist></label>'+
+ '<h3>Events</h3><div class="evg">'+EVS.map(function(e){return '<label class="ck"><input type="checkbox" name="ev" value="'+esc(e)+'"'+(ev.indexOf(e)>-1?' checked':'')+'>'+esc(e)+'</label>'}).join('')+'</div>'+
+ '<h3>Parent or guardian</h3><label>Name<input name="pn" value="'+esc(p.name)+'"></label><label>Phone<input name="pp" type="tel" placeholder="082 123 4567" value="'+esc(p.phone)+'"></label>'+
+ '<label>Notes<textarea name="nt" rows="3">'+esc(a.notes)+'</textarea></label><button class="pri">'+(ME.role=='admin'?'Save':'Submit for approval')+'</button></form>');
+}
+function athData(e){
+ var f=e.target.elements;
+ return{first_name:f.fn.value.trim(),surname:f.sn.value.trim(),date_of_birth:f.dob.value||null,athlete_phone:f.ap.value.trim(),club:f.cl.value.trim(),
+ events:[].slice.call(e.target.querySelectorAll('input[name=ev]:checked')).map(function(x){return x.value}),notes:f.nt.value.trim(),parent_name:f.pn.value.trim(),parent_phone:f.pp.value.trim()};
+}
+function athOld(a){var p=(a.parents||[])[0]||{};return{first_name:a.first_name,surname:a.surname||'',date_of_birth:a.date_of_birth||null,athlete_phone:a.athlete_phone||'',club:(a.partners&&a.partners.name)||'',events:a.events||[],notes:a.notes||'',parent_name:p.name||'',parent_phone:p.phone||''}}
+async function applyAth(d,id){
+ var pid=null;
+ if(d.club){var q=await db.from('partners').select('id').ilike('name',d.club).maybeSingle();
+  if(q.data)pid=q.data.id;else{var n=await db.from('partners').insert({name:d.club,type:'Club'}).select('id').single();if(n.error)return null;pid=n.data.id}}
+ var row={first_name:d.first_name,surname:d.surname,date_of_birth:d.date_of_birth,athlete_phone:d.athlete_phone,partner_id:pid,events:d.events,notes:d.notes};
+ var r=id?await db.from('athletes').update(row).eq('id',id).select('id').single():await db.from('athletes').insert(row).select('id').single();
+ if(r.error)return null;
+ await db.from('parents').delete().eq('athlete_id',r.data.id);
+ if(d.parent_name||d.parent_phone)await db.from('parents').insert({athlete_id:r.data.id,name:d.parent_name,phone:d.parent_phone});
+ return r.data.id;
+}
+async function submitReq(kind,aid,o,n){var r=await db.from('change_requests').insert({kind:kind,athlete_id:aid||null,old_values:o||null,new_values:n||null});return !r.error}
+async function athSave(e,id){
+ e.preventDefault();var b=e.target.querySelector('.pri');b.disabled=true;var d=athData(e);
+ if(ME.role=='admin'){var x=await applyAth(d,id);if(!x){b.disabled=false;return alert('Could not save. Try again.')}closeSh();loadAth();return}
+ var a=id?ATH.find(function(y){return y.id==id}):null;
+ var ok=await submitReq(id?'edit':'new',id,a?athOld(a):null,d);
+ if(!ok){b.disabled=false;return alert('Could not submit. Try again.')}
+ closeSh();loadReq();alert('Submitted. The admin will review it.');
+}
+async function reqDel(id){if(!confirm('Ask the admin to remove this athlete?'))return;var ok=await submitReq('delete',id,null,null);if(!ok)return alert('Could not submit.');closeSh();loadReq();alert('Submitted. The admin will review it.')}
+var REQ=[],RL={first_name:'First name',surname:'Surname',date_of_birth:'Date of birth',athlete_phone:'Athlete phone',club:'Club or school',events:'Events',notes:'Notes',parent_name:'Parent name',parent_phone:'Parent phone'};
+function fmt(v){return Array.isArray(v)?v.join(', '):(v||'none')}
+function reqBody(q){
+ var n=q.new_values||{},who=q.athletes?q.athletes.first_name+' '+(q.athletes.surname||''):((n.first_name||'')+' '+(n.surname||''));
+ if(q.kind=='delete')return 'Remove '+esc(who);
+ if(q.kind=='new')return 'New athlete: '+esc(who)+'<br><span class="mu">Will be assigned to this coach.</span>';
+ var o=q.old_values||{},ch=Object.keys(RL).filter(function(k){return fmt(o[k])!=fmt(n[k])}).map(function(k){return '<br><span class="mu">'+RL[k]+': '+esc(fmt(o[k]))+' to '+esc(fmt(n[k]))+'</span>'}).join('');
+ return 'Change for '+esc(who)+(ch||'<br><span class="mu">No differences.</span>');
+}
+async function loadReq(){
+ var admin=ME.role=='admin',qy=db.from('change_requests').select('*,profiles(first_name,surname),athletes(first_name,surname)').order('created_at',{ascending:false});
+ var r=await (admin?qy.eq('status','pending'):qy.limit(10)),box=document.getElementById('rq');if(!box)return;
+ if(r.error){box.innerHTML='<p class="err">Could not load requests.</p>';return}
+ REQ=r.data;
+ box.innerHTML=REQ.length?REQ.map(function(q){var by=q.profiles?esc(q.profiles.first_name+' '+q.profiles.surname):'';
+  return '<div class="card">'+(admin?'<b>'+by+'</b><br>':'')+reqBody(q)+(admin?'<div style="margin-top:8px"><button class="ap" onclick="reqDecide(\''+q.id+'\',1)">Approve</button> <button class="rj" onclick="reqDecide(\''+q.id+'\',0)">Reject</button></div>':'<br><span class="mu">Status: '+esc(q.status)+'</span>')+'</div>'}).join(''):'<p class="mu">'+(admin?'No requests waiting.':'No requests yet.')+'</p>';
+}
+async function reqDecide(id,yes){
+ var q=REQ.find(function(x){return x.id==id});
+ if(yes){
+  if(q.kind=='delete'){var d=await db.from('athletes').delete().eq('id',q.athlete_id);if(d.error)return alert('Could not apply this request.')}
+  else{var x=await applyAth(q.new_values,q.kind=='edit'?q.athlete_id:null);if(!x)return alert('Could not apply this request.');
+   if(q.kind=='new'){var c=await db.from('coach_athletes').insert({coach_id:q.requested_by,athlete_id:x});if(c.error)alert('Athlete added, but assigning the coach failed. Use Assign coaches.')}}
+ }
+ await db.from('change_requests').update({status:yes?'approved':'rejected',decided_at:new Date().toISOString()}).eq('id',id);
+ loadReq();loadAth();
+}
+async function athDel(id){if(!confirm('Delete this athlete? This cannot be undone.'))return;var r=await db.from('athletes').delete().eq('id',id);if(r.error)return alert('Could not delete.');closeSh();loadAth()}
+
+var PBS=[];
+async function loadPB(id){
+ var r=await db.from('personal_bests').select('*').eq('athlete_id',id).order('achieved_on',{ascending:false});
+ var box=document.getElementById('pbs');if(!box)return;
+ if(r.error){box.innerHTML='<p class="err">Could not load personal bests.</p>';return}
+ PBS=r.data;
+ box.innerHTML=(r.data.map(function(p){return '<div class="card row"><span><b>'+esc(p.event)+'</b>: '+esc(p.result)+'<br><span class="mu">'+esc(p.achieved_on||'')+'</span></span><span><button class="ap" onclick="pbForm(\''+id+'\',\''+p.id+'\')">Edit</button>'+(ME.role=='admin'?' <button class="rj" onclick="pbDel(\''+p.id+'\',\''+id+'\')">Remove</button>':'')+'</span></div>'}).join('')||'<p class="mu">No personal bests yet.</p>')+'<button class="sec" onclick="pbForm(\''+id+'\')">Add personal best</button>';
+}
+function pbForm(aid,pid){
+ var p=pid?PBS.find(function(x){return x.id==pid}):{},a=ATH.find(function(x){return x.id==aid}),own=a.events||[];
+ var opts=own.concat(EVS.filter(function(e){return own.indexOf(e)<0}));
+ sheet(pid?'Edit personal best':'Add personal best','<form onsubmit="pbSave(event,\''+aid+'\',\''+(pid||'')+'\')">'+
+ '<label>Event<input name="ev" list="dle" required value="'+esc(p.event)+'"><datalist id="dle">'+opts.map(function(o){return '<option value="'+esc(o)+'">'}).join('')+'</datalist></label>'+
+ '<label>Result (time, distance or height)<input name="rs" required value="'+esc(p.result)+'"></label>'+
+ '<label>Date<input name="dt" type="date" value="'+esc(p.achieved_on||new Date().toISOString().slice(0,10))+'"></label><button class="pri">Save</button></form>');
+}
+async function pbSave(e,aid,pid){
+ e.preventDefault();var f=e.target.elements,row={athlete_id:aid,event:f.ev.value.trim(),result:f.rs.value.trim(),achieved_on:f.dt.value||null};
+ var r=pid?await db.from('personal_bests').update(row).eq('id',pid):await db.from('personal_bests').insert(row);
+ if(r.error)return alert('Could not save. Try again.');athView(aid);
+}
+async function pbDel(id,aid){if(!confirm('Remove this personal best?'))return;var r=await db.from('personal_bests').delete().eq('id',id);if(r.error)return alert('Could not remove.');athView(aid)}
+async function assignForm(id){
+ var c=await db.from('profiles').select('id,first_name,surname').eq('role','coach').eq('approved',true);
+ var a=await db.from('coach_athletes').select('coach_id').eq('athlete_id',id),have=(a.data||[]).map(function(x){return x.coach_id});
+ var L=(c.data||[]).map(function(x){return '<label class="ck" style="margin-bottom:6px"><input type="checkbox" name="co" value="'+x.id+'"'+(have.indexOf(x.id)>-1?' checked':'')+'>'+esc(x.first_name+' '+x.surname)+'</label>'}).join('');
+ sheet('Assign coaches','<form onsubmit="assignSave(event,\''+id+'\')">'+(L||'<p class="mu">No approved coaches yet. Approve a coach first.</p>')+'<button class="pri">Save</button></form>');
+}
+async function assignSave(e,id){
+ e.preventDefault();var ids=[].slice.call(e.target.querySelectorAll('input[name=co]:checked')).map(function(x){return x.value});
+ var d=await db.from('coach_athletes').delete().eq('athlete_id',id);if(d.error)return alert('Could not save.');
+ if(ids.length){var r=await db.from('coach_athletes').insert(ids.map(function(c){return{coach_id:c,athlete_id:id}}));if(r.error)return alert('Could not save.')}
+ athView(id);
+}
+
+var SES=[];
+function sesGet(id){return SES.find(function(x){return x.id==id})}
+async function loadSes(){
+ var r=await db.from('training_sessions').select('*,attendance(athlete_id)').order('session_date',{ascending:false});
+ var box=document.getElementById('ses');if(!box)return;
+ if(r.error){box.innerHTML='<p class="err">Could not load sessions.</p>';return}
+ SES=r.data;
+ box.innerHTML='<button class="pri" onclick="sesForm()">New session</button><div style="margin-top:10px">'+(SES.map(function(t){return '<div class="card" onclick="sesView(\''+t.id+'\')"><b>'+esc(t.focus||'Training session')+'</b><br><span class="mu">'+esc(t.session_date)+', '+(t.attendance||[]).length+' attended</span></div>'}).join('')||'<p class="mu">No sessions yet. Tap New session.</p>')+'</div>';
+}
+function sesView(id){
+ var t=sesGet(id),ids=(t.attendance||[]).map(function(x){return x.athlete_id});
+ var names=ATH.filter(function(a){return ids.indexOf(a.id)>-1}).map(function(a){return '<div class="card">'+esc(a.first_name+' '+(a.surname||''))+'</div>'}).join('');
+ sheet(t.focus||'Training session','<p class="mu">'+esc(t.session_date)+'</p><h3>Attended</h3>'+(names||'<p class="mu">No attendance recorded.</p>')+'<button class="sec" onclick="sesForm(\''+id+'\')">Edit</button>'+(ME.role=='admin'?'<button class="sec" style="color:#b3261e" onclick="sesDel(\''+id+'\')">Delete session</button>':''));
+}
+async function sesForm(id){
+ if(!ATH.length)await loadAth();
+ var t=id?sesGet(id):{},ids=(t.attendance||[]).map(function(x){return x.athlete_id});
+ sheet(id?'Edit session':'New training session','<form onsubmit="sesSave(event,\''+(id||'')+'\')">'+
+ '<label>Date<input name="d" type="date" required value="'+esc(t.session_date||new Date().toISOString().slice(0,10))+'"></label>'+
+ '<label>Focus<input name="f" placeholder="Sprint starts, endurance, relay passing" value="'+esc(t.focus)+'"></label>'+
+ '<h3>Who attended</h3>'+(ATH.map(function(a){return '<label class="ck" style="margin-bottom:6px"><input type="checkbox" name="at" value="'+a.id+'"'+(ids.indexOf(a.id)>-1?' checked':'')+'>'+esc(a.first_name+' '+(a.surname||''))+'</label>'}).join('')||'<p class="mu">No athletes available yet.</p>')+'<button class="pri">Save session</button></form>');
+}
+async function sesSave(e,id){
+ e.preventDefault();var f=e.target.elements,b=e.target.querySelector('.pri');b.disabled=true;
+ var row={session_date:f.d.value,focus:f.f.value.trim()};
+ var r=id?await db.from('training_sessions').update(row).eq('id',id).select('id').single():await db.from('training_sessions').insert(row).select('id').single();
+ if(r.error){b.disabled=false;return alert('Could not save. Try again.')}
+ var ids=[].slice.call(e.target.querySelectorAll('input[name=at]:checked')).map(function(x){return x.value});
+ var d=await db.from('attendance').delete().eq('session_id',r.data.id);
+ if(d.error){b.disabled=false;return alert('Could not save attendance.')}
+ if(ids.length){var a=await db.from('attendance').insert(ids.map(function(i){return{session_id:r.data.id,athlete_id:i}}));if(a.error){b.disabled=false;return alert('Could not save attendance.')}}
+ closeSh();loadSes();
+}
+async function sesDel(id){if(!confirm('Delete this session and its attendance?'))return;var r=await db.from('training_sessions').delete().eq('id',id);if(r.error)return alert('Could not delete.');closeSh();loadSes()}
+
+var EVL=[];
+async function loadEvs(){
+ var r=await db.from('events').select('*').order('event_date'),box=document.getElementById('evs');if(!box)return;
+ if(r.error){box.innerHTML='<p class="err">Could not load events.</p>';return}
+ EVL=r.data;var t=new Date().toISOString().slice(0,10);
+ var up=EVL.filter(function(x){return x.event_date>=t}),pa=EVL.filter(function(x){return x.event_date<t}).reverse();
+ var card=function(x,c){return '<div class="card" style="'+(c?'opacity:.6':'')+'" onclick="evView(\''+x.id+'\')"><b>'+esc(x.name)+'</b><br><span class="mu">'+esc(x.event_date)+(x.type?', '+esc(x.type):'')+(x.venue?', '+esc(x.venue):'')+'</span></div>'};
+ box.innerHTML=(ME.role=='admin'?'<button class="pri" onclick="evForm()">Add event</button>':'')+'<div style="margin-top:10px">'+
+ (up.length?'<p class="mu">Coming up</p>'+up.map(function(x){return card(x,0)}).join(''):'')+
+ (pa.length?'<p class="mu">Past</p>'+pa.map(function(x){return card(x,1)}).join(''):'')+
+ (EVL.length?'':'<p class="mu">No events yet.'+(ME.role=='admin'?' Tap Add event.':'')+'</p>')+'</div>';
+}
+function evView(id){
+ var x=EVL.find(function(y){return y.id==id});
+ sheet(x.name,'<div class="card"><b>'+esc(x.event_date)+'</b><br><span class="mu">'+esc(x.type||'Event')+(x.venue?'<br>'+esc(x.venue):'')+'</span></div>'+
+ (ME.role=='admin'?'<button class="sec" onclick="evForm(\''+id+'\')">Edit</button><button class="sec" style="color:#b3261e" onclick="evDel(\''+id+'\')">Delete</button>':''));
+}
+function evForm(id){
+ var x=id?EVL.find(function(y){return y.id==id}):{},ty=['Competition','Training camp','Meeting','Fundraiser'];
+ sheet(id?'Edit event':'Add event','<form onsubmit="evSave(event,\''+(id||'')+'\')">'+
+ '<label>Event name<input name="n" required value="'+esc(x.name)+'"></label>'+
+ '<label>Date<input name="d" type="date" required value="'+esc(x.event_date||new Date().toISOString().slice(0,10))+'"></label>'+
+ '<label>Venue<input name="v" value="'+esc(x.venue)+'"></label>'+
+ '<label>Type<select name="k" required style="width:100%;font:inherit;padding:11px 12px;border:1.5px solid var(--l);border-radius:10px;background:var(--w);color:var(--i);margin-top:4px">'+ty.map(function(t){return '<option'+(t==x.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></label>'+
+ '<button class="pri">Save</button></form>');
+}
+async function evSave(e,id){
+ e.preventDefault();var f=e.target.elements,b=e.target.querySelector('.pri');b.disabled=true;
+ var row={name:f.n.value.trim(),event_date:f.d.value,venue:f.v.value.trim(),type:f.k.value};
+ var r=id?await db.from('events').update(row).eq('id',id):await db.from('events').insert(row);
+ if(r.error){b.disabled=false;return alert('Could not save. Try again.')}
+ closeSh();loadEvs();
+}
+async function evDel(id){if(!confirm('Delete this event?'))return;var r=await db.from('events').delete().eq('id',id);if(r.error)return alert('Could not delete.');closeSh();loadEvs()}
+db.auth.onAuthStateChange(function(ev){if(ev==='PASSWORD_RECOVERY'){REC=true;newPwView()}});
+start();
+</script>
+</body></html>
